@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Portfolio</title>
 <meta name="description" content="Software Engineer building enterprise RPA and AI agent workflows with Automation Anywhere, n8n, LangChain and FastAPI.">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;else if(matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.dataset.theme="dark"}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#fff;--alt:rgba(255,255,255,.6);--card:#fff;--ink:#0f172a;--mute:#475569;--line:#e2e8f0;--acc:#2563eb;--acc2:#eff6ff;--r:8px}
@@ -97,9 +98,43 @@ button.gc{width:100%;text-align:left;font:inherit;cursor:pointer;color:inherit}
 .mtext .msum{font-size:1.05rem;margin:12px 0 0}.mtext h3{margin:24px 0 8px;font-size:1.05rem}
 .mtext p{color:var(--mute);max-width:74ch;margin-bottom:10px}.mtext ul{color:var(--mute);padding-left:20px;display:grid;gap:6px}
 @media(max-width:600px){.mtext{padding:14px 18px 24px}.stage{aspect-ratio:4/3}}
+
+/* ===== Uniform card sizes (same size on every page, any image ratio) ===== */
+.grid,.badges{grid-auto-rows:1fr}
+.card,.card.gc{display:flex;flex-direction:column}
+.card .links{margin-top:auto;padding-top:14px}
+.cover{flex:none}
+.cover img{object-fit:cover;object-position:center}
+.gc p{display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ===== Pagination ===== */
+.pgw>.grid,.pgw>.badges{transition:opacity .22s,transform .22s}
+.pgw>.swap{opacity:0;transform:translateY(8px)}
+.pager{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:22px}
+.pager[hidden]{display:none}.pn{display:flex;gap:8px;align-items:center}
+.pb{min-width:36px;height:36px;padding:0 10px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;cursor:pointer;font:500 .88rem Inter}
+.pb:hover,.pb.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.pc{font-size:.88rem;color:var(--mute);min-width:56px;text-align:center}
+.pt{flex-basis:100%;height:3px;max-width:220px;margin:6px auto 0;background:var(--line);border-radius:2px;overflow:hidden}
+.pt i{display:block;height:100%;width:0;background:var(--acc)}
+.pt.run i{animation:pt var(--ad,6s) linear forwards}.pt.hold i{animation-play-state:paused}
+@keyframes pt{to{width:100%}}
+
+/* ===== Page loader ===== */
+body.loading{overflow:hidden}body.loading .in{animation-play-state:paused}
+#loader{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:var(--bg);transition:opacity .5s,visibility .5s}
+#loader.done{opacity:0;visibility:hidden;pointer-events:none}
+.lw{display:grid;gap:14px;justify-items:center;text-align:center}
+.ring{width:56px;height:56px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--acc);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lw b{font-size:1.05rem}
+.lbar{width:210px;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.lbar i{display:block;height:100%;width:0;background:var(--acc);transition:width .25s}
+#lpct{color:var(--mute);font-size:.85rem}
 </style>
 </head>
-<body>
+<body class="loading">
+<div id="loader" role="status" aria-live="polite"><div class="lw"><div class="ring"></div><b>Loading portfolio</b><div class="lbar"><i id="lfill"></i></div><span id="lpct">0%</span></div></div>
 <canvas id="bg" aria-hidden="true"></canvas>
 <nav><div class="wrap"><b id="navName"></b>
 <a class="l" href="#about">About</a><a class="l" href="#skills">Skills</a><a class="l" href="#experience">Experience</a><a class="l" href="#gallery">Projects</a><a class="l" href="#github">GitHub</a><a class="l" href="#certs">Certificates</a><a class="l" href="#contact">Contact</a>
@@ -144,6 +179,7 @@ button.gc{width:100%;text-align:left;font:inherit;cursor:pointer;color:inherit}
    to "data.json".
    ===================================================================== */
 const DATA_FILE="data.xlsx";
+const PER_PAGE=6,BADGE_PER_PAGE=8,AUTO_MS=6000; /* cards per page, badges per page, auto-advance delay */
 const $=s=>document.querySelector(s),esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tags=a=>a&&a.length?`<div class="tags">${a.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:"";
 const links=a=>a&&a.length?`<div class="links">${a.map(([n,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}</div>`:"";
@@ -183,6 +219,43 @@ async function loadData(){
 let S,io;
 function observe(){io=io||new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("show");io.unobserve(e.target)}}),{threshold:.1});document.querySelectorAll(".rv:not(.show)").forEach(el=>io.observe(el))}
 function fill(sel,arr,fn){const el=$(sel);el.innerHTML=arr.map(fn).join("");const sec=el.closest("section");if(sec)sec.hidden=!arr.length}
+
+/* ---------- pagination (auto + manual) ---------- */
+const STILL=matchMedia("(prefers-reduced-motion: reduce)").matches,PGS=new Set();
+const vio=new IntersectionObserver(es=>es.forEach(e=>e.target._vis=e.isIntersecting),{threshold:.15});
+function pager(sel,arr,fn,per,hide=true){
+  const el=$(sel),sec=el.closest("section");if(hide&&sec)sec.hidden=!arr.length;
+  let w=el.parentElement;if(!w.classList.contains("pgw")){w=document.createElement("div");w.className="pgw";el.before(w);w.append(el);vio.observe(w)}
+  const old=w._p;if(old){clearTimeout(old.t);clearTimeout(old.sw);old.bar.remove();PGS.delete(old)}
+  const n=Math.max(1,Math.ceil(arr.length/per)),bar=document.createElement("div");
+  bar.className="pager";bar.hidden=n<2;bar.style.setProperty("--ad",AUTO_MS+"ms");
+  const p={el,w,arr,fn,per,n,i:0,first:1,mh:0,play:!STILL,hold:false,t:0,sw:0,bar};w._p=p;PGS.add(p);
+  bar.innerHTML=`<button class="pb" data-a="prev" aria-label="Previous page">‹</button><span class="pn">${n<8?Array.from({length:n},(_,k)=>`<button class="pb" data-i="${k}" aria-label="Page ${k+1}">${k+1}</button>`).join(""):'<span class="pc"></span>'}</span><button class="pb" data-a="next" aria-label="Next page">›</button><button class="pb" data-a="play"></button><span class="pt"><i></i></span>`;
+  w.after(bar);
+  bar.onclick=e=>{const b=e.target.closest(".pb");if(!b)return;const a=b.dataset.a;
+    if(a=="play"){p.play=!p.play;upd(p);sched(p)}else go(p,a=="prev"?p.i-1:a=="next"?p.i+1:+b.dataset.i)};
+  const hold=v=>{p.hold=v;bar.querySelector(".pt").classList.toggle("hold",v);if(!v)sched(p)};
+  w.onpointerenter=bar.onpointerenter=()=>hold(true);w.onpointerleave=bar.onpointerleave=()=>hold(false);
+  go(p,0,true);
+}
+function upd(p){const b=p.bar;
+  b.querySelectorAll("[data-i]").forEach(x=>{const on=+x.dataset.i==p.i;x.classList.toggle("on",on);if(on)x.setAttribute("aria-current","page");else x.removeAttribute("aria-current")});
+  const c=b.querySelector(".pc");if(c)c.textContent=`${p.i+1} / ${p.n}`;
+  const pl=b.querySelector('[data-a=play]');pl.textContent=p.play?"❚❚":"▶";pl.setAttribute("aria-label",p.play?"Pause auto-play":"Start auto-play")}
+function sched(p){clearTimeout(p.t);const pt=p.bar.querySelector(".pt");pt.classList.remove("run");
+  if(!p.play||p.n<2)return;void pt.offsetWidth;pt.classList.add("run");p.t=setTimeout(()=>tick(p),AUTO_MS)}
+function tick(p){if(p.w._vis&&!p.hold&&M.hidden&&!document.hidden)go(p,p.i+1);else p.t=setTimeout(()=>tick(p),500)}
+function go(p,i,now){
+  p.i=(i%p.n+p.n)%p.n;upd(p);clearTimeout(p.sw);
+  const draw=()=>{p.w.style.minHeight="";p.el.innerHTML=p.arr.slice(p.i*p.per,(p.i+1)*p.per).map(p.fn).join("");
+    if(p.first)observe();else p.el.querySelectorAll(".rv").forEach(e=>e.classList.add("show"));
+    p.first=0;p.mh=Math.max(p.mh,p.w.offsetHeight);p.w.style.minHeight=p.mh+"px";p.el.classList.remove("swap")};
+  if(now||!p.arr.length)draw();else{p.el.classList.add("swap");p.sw=setTimeout(draw,220)}
+  sched(p);
+}
+function relayout(){PGS.forEach(p=>{p.mh=0;go(p,p.i,true)})}
+let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(relayout,250)});
+
 function render(){
   document.title=`${S.name} – ${S.roles[0]||""}`;
   $("#navName").textContent=S.name;$("#name").textContent=S.name;$("#role").textContent=S.roles.slice(0,2).join(" | ");
@@ -193,20 +266,20 @@ function render(){
   $("#stats").innerHTML=S.stats.map(([a,b])=>`<div class="stat in" style="animation-delay:.8s"><b>${esc(a)}</b><span>${esc(b)}</span></div>`).join("");
   fill("#skillList",S.skills,([g,t])=>`<div class="sk rv"><b>${esc(g)}</b>${tags(t)}</div>`);
   fill("#expList",S.experience,o=>`<div class="orgb rv"><h3>${esc(o.org)}</h3><div class="loc">${esc(o.location)}</div><div class="roles">${o.roles.map(r=>`<div class="job"><div class="when">${esc(r.when)}</div><h4>${esc(r.title)}</h4><ul>${r.points.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></div>`).join("")}</div></div>`);
-  fill("#galList",S.gallery,p=>`<button class="card gc rv" data-slug="${esc(p.slug)}"><div class="cover"><span>${esc(String(p.title)[0])}</span><img src="${esc(p.cover||"")}" alt="" loading="lazy" onerror="this.remove()"></div><h3>${esc(p.title)}</h3><p>${esc(p.summary)}</p>${tags(p.stack.slice(0,4))}<div class="links"><span>View details and screenshots</span></div></button>`);
-  fill("#resList",S.research,card);fill("#eduList",S.education,card);
-  const cs=$("#certList").closest("section");$("#certList").innerHTML=S.certificates.map(badge).join("");$("#badgeList").innerHTML=S.badges.map(badge).join("");
+  pager("#galList",S.gallery,p=>`<button class="card gc rv" data-slug="${esc(p.slug)}"><div class="cover"><span>${esc(String(p.title)[0])}</span><img src="${esc(p.cover||"")}" alt="" decoding="async" onerror="this.remove()"></div><h3>${esc(p.title)}</h3><p>${esc(p.summary)}</p>${tags(p.stack.slice(0,4))}<div class="links"><span>View details and screenshots</span></div></button>`,PER_PAGE);
+  pager("#resList",S.research,card,PER_PAGE);pager("#eduList",S.education,card,PER_PAGE);
+  const cs=$("#certList").closest("section");pager("#certList",S.certificates,badge,BADGE_PER_PAGE,false);pager("#badgeList",S.badges,badge,BADGE_PER_PAGE,false);
   cs.hidden=!S.certificates.length&&!S.badges.length;$("#badgeHead").hidden=!S.badges.length;$("#certHead").hidden=!S.certificates.length;
   $("#contact-links").innerHTML=S.contact.map(([n,u],i)=>`<a class="btn${i?'':' p'}" href="${esc(u)}" ${String(u).startsWith("http")?'target="_blank" rel="noopener"':''}>${esc(n)}</a>`).join("");
   const cats=["All",...new Set(S.projects.map(p=>p.category))];
   $("#filters").innerHTML=cats.map((c,i)=>`<button class="fb${i?'':' on'}" data-c="${esc(c)}">${esc(c)}</button>`).join("");$("#filters").hidden=cats.length<3;
-  const showP=c=>{fill("#projList",S.projects.filter(p=>c=="All"||p.category==c),card);observe()};showP("All");
+  const showP=c=>{pager("#projList",S.projects.filter(p=>c=="All"||p.category==c),card,PER_PAGE);observe()};showP("All");
   $("#projects").hidden=!S.projects.length;
   $("#filters").onclick=e=>{const b=e.target.closest(".fb");if(!b)return;document.querySelectorAll(".fb").forEach(x=>x.classList.toggle("on",x==b));showP(b.dataset.c)};
   $("#ghLink").href=`https://github.com/${S.github.username}`;
   if(S.github.username)fetch(`https://api.github.com/users/${S.github.username}/repos?sort=updated&per_page=30`).then(r=>r.json()).then(rs=>{
-    rs=rs.filter(r=>!(S.github.skipForks&&r.fork)).slice(0,S.github.show);if(!rs.length)throw 0;
-    $("#ghList").innerHTML=rs.map(r=>card({title:r.name,desc:r.description||"No description yet.",tags:[r.language,r.stargazers_count?`★ ${r.stargazers_count}`:null].filter(Boolean),links:[["Code",r.html_url],...(r.homepage?[["Live",r.homepage]]:[])]})).join("");observe();
+    rs=rs.filter(r=>!(S.github.skipForks&&r.fork));if(!rs.length)throw 0;
+    pager("#ghList",rs,r=>card({title:r.name,desc:r.description||"No description yet.",tags:[r.language,r.stargazers_count?`★ ${r.stargazers_count}`:null].filter(Boolean),links:[["Code",r.html_url],...(r.homepage?[["Live",r.homepage]]:[])]}),S.github.show);observe();
   }).catch(()=>{$("#ghList").innerHTML=`<p class="sub">Repositories could not be loaded. Visit <a href="https://github.com/${esc(S.github.username)}">github.com/${esc(S.github.username)}</a>.</p>`});
   else $("#github").hidden=true;
   observe();
@@ -258,8 +331,27 @@ $("#theme").onclick=()=>{const d=root.dataset.theme=="dark"?"light":"dark";root.
   document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!still)frame()});size();frame();
 })();
 
+/* ---------- loader + image preloading ---------- */
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function setProgress(f){const v=Math.round(f*100);$("#lfill").style.width=v+"%";$("#lpct").textContent=v+"%"}
+function preload(urls,cb){
+  urls=[...new Set(urls.filter(Boolean))];let done=0;const tot=urls.length;
+  if(!tot){cb&&cb(1);return Promise.resolve()}
+  return Promise.all(urls.map(u=>new Promise(r=>{const im=new Image(),f=()=>{done++;cb&&cb(done/tot);r()};im.onload=im.onerror=f;im.src=u})));
+}
+function hideLoader(){const l=$("#loader");if(!l)return;l.classList.add("done");document.body.classList.remove("loading");setTimeout(()=>l.remove(),700)}
+
 /* ---------- start ---------- */
-loadData().then(d=>{S=d;render();route()}).catch(err=>{
+loadData().then(async d=>{
+  S=d;render();route();
+  const first=[S.photo,...S.gallery.map(g=>g.cover),...S.gallery.map(g=>g.screenshots[0]&&g.screenshots[0].src),...S.certificates.map(c=>c.image),...S.badges.map(c=>c.image)];
+  /* wait for every card/badge image (max 15s so a broken link never blocks the page) + a short minimum so the loader never flashes */
+  await Promise.all([Promise.race([preload(first,setProgress),wait(15000)]),wait(500)]);
+  setProgress(1);hideLoader();
+  (document.fonts&&document.fonts.ready||Promise.resolve()).then(relayout);
+  preload(S.gallery.flatMap(g=>g.screenshots.map(s=>s.src))); /* warm remaining screenshots in the background */
+}).catch(err=>{
+  hideLoader();
   const b=document.createElement("div");b.className="err";
   b.innerHTML=`<b>Could not load ${DATA_FILE}.</b> ${esc(err.message)}. Keep ${DATA_FILE} in the same folder as index.html and open the site through a web server (for example run <code>python -m http.server</code> in this folder), because browsers block data files opened directly from disk.`;
   document.body.prepend(b)});
